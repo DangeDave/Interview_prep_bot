@@ -1,37 +1,65 @@
 require('dotenv').config();
-const { Bot, Keyboard, InlineKeyboard, GrammyError, HttpError } = require('grammy');
+const {
+	Bot,
+	Keyboard,
+	InlineKeyboard,
+	GrammyError,
+	HttpError,
+} = require('grammy');
+const { getRandomQuestion } = require('./utils');
 
 const bot = new Bot(process.env.BOT_API_KEY);
 
-bot.command('start', async (ctx) => {
-    const startKeyboard = new Keyboard()
-			.text('HTML')
-			.text('CSS')
-            .row()
-			.text('JavaScript')
-			.text('React')
-            .resized();
-    await ctx.reply('Привет,  я помогу тебе подготовится к собесам на фронта');
-    await ctx.reply('С чего начнем, выберите тему в меню:', {reply_markup: startKeyboard})
-    
+bot.command('start', async ctx => {
+	const startKeyboard = new Keyboard()
+		.text('HTML')
+		.text('CSS')
+		.row()
+		.text('JavaScript')
+		.text('React')
+		.resized();
+	await ctx.reply('Привет,  я помогу тебе подготовится к собесам на фронта');
+	await ctx.reply('С чего начнем, выберите тему в меню:', {
+		reply_markup: startKeyboard,
+	});
 });
 
-bot.on('callback_query:data', async (ctx) => {
-    if(ctx.callbackQuery.data === 'cancel') {
-        await ctx.reply('Отменено');
-        await ctx.answerCallbackQuery();
-        return
-    }
-    const callbackData = JSON.parse(ctx.callbackQuery.data);
-    await ctx.reply(`${callbackData.type} - составляющая фронтенда`)
-    await ctx.answerCallbackQuery();
-})
+bot.on('callback_query:data', async ctx => {
+	// if (ctx.callbackQuery.data === 'cancel') {
+	// 	await ctx.reply('Отменено');
+	// 	await ctx.answerCallbackQuery();
+	// 	return;
+	// }
+	const callbackData = JSON.parse(ctx.callbackQuery.data);
+	// await ctx.reply(`${callbackData.type} - составляющая фронтенда`);
+	// await ctx.answerCallbackQuery();
+});
 
 bot.hears(['HTML', 'CSS', 'JavaScript', 'React'], async ctx => {
-    const inlineKeyboard = new InlineKeyboard()
-			.text('Получить ответ', JSON.stringify({type: ctx.message.text, questionId: 1}))
-			.text('Отменить', 'cancel');
-	await ctx.reply(`Что такое ${ctx.msg.text}?`, {
+	const topic = ctx.message.text;
+	const question = getRandomQuestion(topic);
+	let inlineKeyboard;
+	if (question.hasOptions) {
+		const buttonRows = question.options.map(option => [
+			InlineKeyboard.text(
+				option.text,
+				JSON.stringify({
+					type: `${topic} - option`,
+					isCorrect: option.isCorrect,
+					questionId: question.id,
+				})
+			),
+		]);
+
+		inlineKeyboard = InlineKeyboard.from(buttonRows);
+	} else {
+		inlineKeyboard = new InlineKeyboard().text(
+			'Узнать ответ',
+			JSON.stringify({ type: topic, questionId: question.id })
+		);
+	}
+
+	await ctx.reply(question.text, {
 		reply_markup: inlineKeyboard,
 	});
 });

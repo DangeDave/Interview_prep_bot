@@ -1,4 +1,4 @@
-const questions = require('/.questions.json');
+const questions = require('./questions.json');
 
 const getRandomQuestion = (topic) => {
     const questionTopic = topic.toLowerCase();
